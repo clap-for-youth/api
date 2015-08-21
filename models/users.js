@@ -1,45 +1,149 @@
-var users = {
+'use strict';
+/**
+ * Module dependencies.
+ */
+var mongoose = require('mongoose');
+var crypto = require('crypto');
 
-    getAll: function(req, res) {
-        var allusers = data; // Spoof a DB call
-        res.json(allusers);
+var Schema = mongoose.Schema;
+
+/**
+ * User Schema
+ */
+
+var userSchema = new Schema({
+    username: {type: String, default: ''},
+    hashed_password: {type: String, default: ''},
+});
+
+/**
+ * Virtuals
+ */
+
+userSchema
+    .virtual('password')
+    .set(function (password) {
+        this._password = password;
+        this.salt = this.makeSalt();
+        this.hashed_password = this.encryptPassword(password);
+    })
+    .get(function () {
+        return this._password;
+    });
+
+/**
+ * Validations
+ */
+
+var validatePresenceOf = function (value) {
+    return value && value.length;
+};
+
+// the below 5 validations only apply if you are signing up traditionally
+
+userSchema.path('username').validate(function (username) {
+    if (this.skipValidation()) return true;
+    return username.length;
+}, 'Username cannot be blank');
+
+userSchema.path('hashed_password').validate(function (hashed_password) {
+    if (this.skipValidation()) return true;
+    return hashed_password.length;
+}, 'Password cannot be blank');
+
+
+/**
+ * Pre-save hook
+ */
+
+userSchema.pre('save', function (next) {
+    if (!this.isNew) return next();
+
+    if (!validatePresenceOf(this.password) && !this.skipValidation()) {
+        next(new Error('Invalid password'));
+    } else {
+        next();
+    }
+});
+
+/**
+ * Methods
+ */
+
+userSchema.methods = {
+
+    /**
+     * Authenticate - check if the passwords are the same
+     *
+     * @param {String} plainText
+     * @return {Boolean}
+     * @api public
+     */
+
+    authenticate: function (plainText) {
+        return this.encryptPassword(plainText) === this.hashed_password;
     },
 
-    getOne: function(req, res) {
-        var id = req.params.id;
-        var user = data[0]; // Spoof a DB call
-        res.json(user);
+    /**
+     * Make salt
+     *
+     * @return {String}
+     * @api public
+     */
+
+    makeSalt: function () {
+        return Math.round((new Date().valueOf() * Math.random())) + '';
     },
 
-    create: function(req, res) {
-        var newuser = req.body;
-        data.push(newuser); // Spoof a DB call
-        res.json(newuser);
+    /**
+     * Encrypt password
+     *
+     * @param {String} password
+     * @return {String}
+     * @api public
+     */
+
+    encryptPassword: function (password) {
+        if (!password) return '';
+        try {
+            return crypto
+                .createHmac('sha1', this.salt)
+                .update(password)
+                .digest('hex');
+        } catch (err) {
+            return '';
+        }
     },
 
-    update: function(req, res) {
-        var updateuser = req.body;
-        var id = req.params.id;
-        data[id] = updateuser; // Spoof a DB call
-        res.json(updateuser);
-    },
+    ///**
+    // * Validation is not required if using OAuth
+    // */
+    //
+    //skipValidation: function() {
+    //    return ~oAuthTypes.indexOf(this.provider);
+    //}
+};
 
-    delete: function(req, res) {
-        var id = req.params.id;
-        data.splice(id, 1); // Spoof a DB call
-        res.json(true);
+/**
+ * Statics
+ */
+
+userSchema.statics = {
+
+    /**
+     * Load
+     *
+     * @param {Object} options
+     * @param {Function} cb
+     * @api private
+     */
+
+    load: function (options, cb) {
+        options.select = options.select || 'username';
+        this.findOne(options.criteria)
+            .select(options.select)
+            .exec(cb);
     }
 };
 
-var data = [{
-    name: 'user 1',
-    id: '1'
-}, {
-    name: 'user 2',
-    id: '2'
-}, {
-    name: 'user 3',
-    id: '3'
-}];
-
-module.exports = users;
+mongoose.model('User', userSchema);
