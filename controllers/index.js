@@ -1,19 +1,19 @@
 var express = require('express');
 var router = express.Router();
 
-var auth = require('../lib/auth.js');
-var user = require('../models/users.js');
+var auth = require('./auth');
+var assessment = require('./assessment');
 
 /*
- * Routes that can be accessed by any one
+ * Auth Router
  */
 router.post('/login', auth.login);
 
 /*
- * Routes that can be accessed only by authenticated & authorized users
+ * Assessment Router
  */
-//router.get('/api/v1/admin/users', user.getAll);
-//router.get('/api/v1/admin/user/:id', user.getOne);
+router.get('/api/v1/private/assessments', assessment.getAll);
+router.get('/api/v1/private/assessment/:code', assessment.getOne);
 //router.post('/api/v1/admin/user/', user.create);
 //router.put('/api/v1/admin/user/:id', user.update);
 //router.delete('/api/v1/admin/user/:id', user.delete);

@@ -4,6 +4,7 @@
  */
 var mongoose = require('mongoose');
 var crypto = require('crypto');
+var basePlugin = require('./base');
 
 var Schema = mongoose.Schema;
 
@@ -13,8 +14,14 @@ var Schema = mongoose.Schema;
 
 var userSchema = new Schema({
     username: {type: String, default: ''},
+    salt: {type: String, default: ''},
     hashed_password: {type: String, default: ''},
+    changePasswordNow: {type: Boolean, default: false},
+    loginCount: {type:Number, default: 0},
+    lastLoginDate: Date
 });
+userSchema.plugin(basePlugin);
+userSchema.index({username:1});
 
 /**
  * Virtuals
@@ -39,7 +46,7 @@ var validatePresenceOf = function (value) {
     return value && value.length;
 };
 
-// the below 5 validations only apply if you are signing up traditionally
+// the below validations only apply if you are signing up traditionally
 
 userSchema.path('username').validate(function (username) {
     if (this.skipValidation()) return true;
@@ -59,7 +66,7 @@ userSchema.path('hashed_password').validate(function (hashed_password) {
 userSchema.pre('save', function (next) {
     if (!this.isNew) return next();
 
-    if (!validatePresenceOf(this.password) && !this.skipValidation()) {
+    if (!validatePresenceOf(this.hashed_password) && !this.skipValidation()) {
         next(new Error('Invalid password'));
     } else {
         next();
@@ -81,6 +88,7 @@ userSchema.methods = {
      */
 
     authenticate: function (plainText) {
+        console.log(this.encryptPassword(plainText));
         return this.encryptPassword(plainText) === this.hashed_password;
     },
 
@@ -130,8 +138,10 @@ userSchema.methods = {
 
 userSchema.statics = {
 
+    baseField: 'username',
+
     /**
-     * Load
+     * Find
      *
      * @param {Object} options
      * @param {Function} cb

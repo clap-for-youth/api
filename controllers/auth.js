@@ -3,7 +3,7 @@
 var jwt = require('jwt-simple'),
     mongoose = require('mongoose'),
     User = mongoose.model('User'),
-    err = require('./errorHandler');
+    errHandler = require('./../lib/errorHandler');
 
 function expiresIn(numDays) {
     var dateObj = new Date();
@@ -33,32 +33,26 @@ var auth = {
         var password = req.body.password || '';
 
         if (username === '' || password === '') {
-            err(res, 401);
+            errHandler.out(res, 400);
             return;
         }
 
         // Fire a query to your DB and check if the credentials are valid
         User.findOne({username: username}).exec(function(err, user) {
-            if (err) return next(err);
-            if (!user) return next(new Error('Failed to load User ' + username));
+            if (err) {
+                return next(err);
+            }
+            if (!user) {
+                errHandler.out(res, 400);
+                return;
+            }
 
-            res.json(genToken(user));
+            if (user.authenticate(password)){
+                res.json(genToken(user));
+            } else {
+                errHandler.out(res, 401);
+            }
         });
-
-
-        //var dbUserObj = auth.validate(username, password);
-        //
-        //if (!dbUserObj) { // If authentication fails, we send a 401 back
-        //    err(res, 401);
-        //    return;
-        //}
-        //
-        //if (dbUserObj) {
-        //
-        //    // If authentication is success, we will generate a token
-        //    // and dispatch it to the client
-        //
-        //}
 
     },
 
@@ -67,7 +61,6 @@ var auth = {
         if (!user) {
             return false;
         }
-        console.log(user);
         var dbUserObj = user.authenticate(password);
         return dbUserObj;
     },

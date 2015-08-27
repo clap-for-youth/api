@@ -3,8 +3,8 @@ var express = require('express'),
     logger = require('morgan'),
     bodyParser = require('body-parser'),
     i18next = require('i18next'),
-    errHandler = require('./errorHandler'),
-    db = require('./db'),
+    errHandler = require('./lib/errorHandler'),
+    db = require('./lib/db'),
     app = express();
 
 // init language
@@ -16,7 +16,7 @@ app.use(bodyParser.json());
 app.all('/*', function (req, res, next) {
 // init db connection
     db.on('error', function() {
-        errHandler(res, 500, 'database connection error');
+        errHandler.out(res, 500, 'database connection error');
     });
     // CORS headers
     res.header('Access-Control-Allow-Origin', '*'); // restrict it to the required domain
@@ -34,19 +34,19 @@ app.all('/*', function (req, res, next) {
 // Only the requests that start with /api/v1/* will be checked for the token.
 // Any URL's that do not follow the below pattern should be avoided unless you
 // are sure that authentication is not needed
-app.all('/api/v1/*', [require('./validateRequest')]);
+app.all('/api/v1/*', [require('./lib/validateRequest')]);
 
-app.use('/', require('../controllers/index'));
+app.use('/', require('./controllers/index'));
 
 // If no route is matched by now, it must be a 404
 app.use(function (req, res, next) {
-    errHandler(res, 404);
+    errHandler.out(res, 404);
     next();
 });
 
 // error handler
 app.use(function(err, req, res, next) {
-    errHandler(res, 500, err.message);
+    errHandler.out(res, 500, err.message);
     console.error(err.stack);
     next();
 });

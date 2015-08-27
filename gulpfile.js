@@ -14,25 +14,26 @@ gulp.task('set-env', function () {
 
 gulp.task('jshint', function () {
     var jshint = require('gulp-jshint');
-    return gulp.src(['./models/*.js', './lib/*.js'])
+    return gulp.src(['./models/*.js', './lib/*.js', './test/*.js'])
         .pipe(jshint())
         .pipe(jshint.reporter('jshint-stylish'))
         .pipe(jshint.reporter('fail'));
 });
 
-gulp.task('test', function () {
-    //var mocha = require('testing');
-
+gulp.task('mocha', function () {
+    var mocha = require('gulp-mocha');
+    return gulp.src('./test/test-*.js', {read: false})
+        .pipe(mocha({reporter: 'nyan'}));
 });
 
 gulp.task('express', function () {
-    var app = require('./lib/app.js'),
+    var app = require('./app'),
         server = app.listen(app.get('port'), function () {
             console.log('Express server listening on port ' + server.address().port);
         });
 });
 
-gulp.task('test', ['set-env', 'jshint', 'test'], function () {
+gulp.task('test', ['set-env', 'jshint', 'mocha'], function () {
 });
 gulp.task('default', ['set-env', 'jshint', 'express'], function () {
 });

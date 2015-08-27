@@ -28,5 +28,12 @@
   "node": true,
 //  "es5": true,
   "esnext": true,
-  "globals": {}
+  "globals": {
+    "describe": false,
+    "before": false,
+    "after": false,
+    "context": false,
+    "cookies": false,
+    "it": false
+  }
 }
